@@ -1,0 +1,161 @@
+import pandas as pd,ollama,gradio as gr
+M="qwen2.5:0.5b"
+
+c1 = pd.read_csv(r"ecommerce_faq.csv")
+c2 = pd.read_csv(r"products.csv")
+c3 = pd.read_csv(r"reviews.csv")
+
+
+data_context=f"""
+    faq data: {c1.to_string(index=False)} 
+    product data: {c2.to_string(index=False)}
+    review data: {c3.to_string(index=False)}
+"""
+def gen(q):
+    if not q.strip():
+        return "Enter your query"
+
+    r=ollama.chat(
+        model=M,messages=[{"role":"system","content":"you are a ecommerce chatbot, you will use the provided data to answer your queries accurately."},
+        {"role":"user","content": f"{data_context}\n\nuser query:{q}"}
+        ])
+    return r["message"]["content"].strip()
+
+gr.Interface(
+    fn=gen,
+    inputs=gr.Textbox(lines=2,label="enter your query"),
+    outputs=gr.Textbox(lines=10,label="answer"),
+    title="eccomerce chatbot"
+).launch(inbrowser=True)
+
+
+
+
+
+
+
+
+
+import gradio as gr,ollama
+
+M="qwen2.5:0.5b"
+
+def gen(title,tone,length):
+    if not title: return "enter you title"
+    p = f"write ~{length} words{tone} blog about: {title}"
+    r=ollama.chat(model=M,messages=[{"role":"user","content":p}])
+    return r["message"]["content"]
+gr.Interface(
+    fn=gen,
+    inputs=[gr.Text(label="title"),gr.Text(label="tone"),gr.Text(label="length")],
+    outputs=gr.Textbox(lines=20,label="blog content"),
+    title="blog platform"
+).launch(inbrowser=True)
+
+
+
+
+
+
+import ollama,pandas as pd,gradio as gr
+
+M = "qwen2.5:0.5b"
+
+c1=pd.read_csv("customer_queries.csv")
+
+p=f"""customer query: {c1.to_string(index=False)}
+"""
+def gen(q):
+  if not q.strip():
+    return "enter your query"
+  r = ollama.chat(model=M, messages=[
+      {"role": "system", "content": "You are a polite customer query agent and a email assistant. you should use the provided data to help customer according to thier queries accurately"},
+      {"role": "user", "content": f"{p}\n\nuser query: {q}"}
+  ])
+  return r["message"]["content"].strip()
+
+gr.Interface(
+  fn=gen,
+  inputs=gr.Textbox(lines=2,label="Enter your customer query annd email assistance"),
+  outputs=gr.Textbox(lines=20,label="Answer"),
+  title="customer query and email assistance"
+).launch(inbrowser=True)
+
+
+
+
+
+import gradio as gr,ollama
+from PyPDF2 import PdfReader
+from docx import Document
+M="qwen2.5:0.5b"
+
+def gen(f):
+    n=getattr(f,"name"," ")
+    if n.lower().endswith(".pdf"):
+        return "\n".join([p.extract_text() or " " for p in PdfReader(f).pages])
+    elif n.lower().endswith(".docx"):
+        return "\n".join([p.text for p in Document(f).paragraphs if p.text.strip()])
+    elif n.lower().endswith(".txt"):
+        with open(f,"r",encoding="utf-8")as text:
+            return text.read()
+    else:
+        return "unsupported file"
+def a(files,q=""):
+    text=[]
+    for f in files:
+        text.append(gen(f))
+        t="\n\n".join(text)
+        s=ollama.chat(model=M,messages=[{"role":"system","content":f"you are a legal document summarizer using the text{t}"},{"role":"user","content":f"\n user query:{q}"}])["message"]["content"].strip()
+        if q and q.strip():
+            answer=ollama.chat(model=M,messages=[{"role":"user","content":f"Answer based on the text{t} with the question {q}"}])["message"]["content"].strip()
+            return f"summaizer{s}query answer{answer}"
+        return f"summary{s}"
+gr.Interface(
+    fn=a,
+    inputs=[gr.File(type="filepath",file_count="multiple"),gr.Textbox(lines=2,label="Enter your query(optional)")],
+    outputs=gr.Textbox(lines=20,label="summary and answer"),
+    title="legal document summarizer and query answer system"
+).launch(inbrowser=True)
+
+
+
+import pandas as pd,ollama,gradio as gr
+M="qwen2.5:0.5b"
+
+c1=pd.read_csv("recom.csv")
+
+data_context=f""" recommendation data:{c1.to_string(index=False)}"""
+
+def gen(q):
+    if not q : return "Enter your preferences"
+    r=ollama.chat(model=M,messages=[{"role":"system","content":"you are intelligent Movie recomendation system, you will recommend 5 NEW movies according to the user prefernces"},{"role":"user","content":f"\n\n{data_context}\n\nuserquery{q}"}])["message"]["content"].strip()
+    return r
+gr.Interface(
+    fn=gen,
+    inputs=gr.Textbox(lines=2,label="Enter the preferences"),
+    outputs=gr.Textbox(lines=20,label="TOP 5 MOVIE RECOMMENDATIONS"),
+    title="MOVIE RECOMMENDATION SYSTEM"
+).launch(inbrowser=True)
+
+
+
+
+import ollama,pandas as pd,gradio as gr
+M="qwen2.5:0.5b"
+
+n=pd.read_csv("kb.csv")
+
+data_context=f"knowlefge base:{n.to_string(index=False)}"
+
+def gen(q):
+    if not q: return "Enter the symptoms"
+    r=ollama.chat(model=M,messages=[{"role":"system","content":"you are a helpfull medical assistant, you will use the provided data to give advise,suggestion,disclaimersaccording to the user symptoms"},{"role":"user","content":f"\n{data_context}\n\nuser quer{q}"}])["message"]["content"].strip()
+    return r
+
+gr.Interface(
+    fn=gen,
+    inputs=gr.Textbox(lines=2,label="medical symtoms"),
+    outputs=gr.Textbox(lines=20,label="advice and suggestions"),
+    title="medical assistance system"
+).launch(inbrowser=True)
