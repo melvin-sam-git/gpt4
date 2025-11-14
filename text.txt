@@ -53,3 +53,34 @@ gr.Interface(
     inputs=["text", "number"],
     outputs=gr.Textbox(lines=20, label="Output")  # <-- Larger output box
 ).launch()
+
+
+
+
+
+
+import gradio as gr
+import ollama
+import pandas as pd
+
+# Load your CSV once
+df = pd.read_csv("kb.csv")
+csv_text = df.to_string(index=False)
+
+def blog(topic, words):
+    p = f"""
+Write a {words}-word blog about {topic}.
+Use the following CSV data for reference:
+{csv_text}
+"""
+    return ollama.chat(
+        model="qwen2.5:0.5b",
+        messages=[{"role": "user", "content": p}]
+    )["message"]["content"]
+
+gr.Interface(
+    fn=blog,
+    inputs=["text", "number"],
+    outputs=gr.Textbox(lines=20, label="Output")
+).launch()
+
